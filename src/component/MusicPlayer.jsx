@@ -1,12 +1,38 @@
 import { useEffect } from "react";
-import { useMusic } from "../hooks/useMusic";
+
 import { useRef } from "react";
+import { useMusic } from "../contexts/MusicContext";
+
 
 const MusicPlayer = () => {
 const {currentTrack, formatTime, currentTime, duration,
-    setDuration, setCurrentTime, nextTrack, prevTrack, isPlaying, pause, play} = useMusic();
+    setDuration, setCurrentTime, nextTrack, prevTrack, isPlaying, pause, play, volume, setVolume,} = useMusic();
 
 const audioRef = useRef(null);
+const handleTimeChange = (e) => {
+     const audio = audioRef.current;
+     if(!audio) return;
+     const newTime = parseFloat(e.target.value);
+     audio.currentTime = newTime;
+     setCurrentTime(newTime);
+
+}
+
+const handleVolumeChange = (e) => {
+    
+     const newVolume = parseFloat(e.target.value);
+     setVolume(newVolume);
+
+}
+
+useEffect(() =>{
+   const audio = audioRef.current;
+     if(!audio) return;
+
+audio.volume = volume;
+}, [volume])
+
+
 useEffect(() =>{
    const audio = audioRef.current;
      if(!audio) return;
@@ -14,9 +40,10 @@ useEffect(() =>{
  if(isPlaying){
    audio.play().catch((err) => console.error(err));
  }else{
-    audio.pause
+    audio.pause()
  }
 }, [isPlaying])
+
 useEffect(() =>{
    const audio = audioRef.current;
    if(!audio) return;
@@ -32,12 +59,28 @@ useEffect(() =>{
    };
    
    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+    audio.addEventListener("canplay", handleLoadedMetadata);
    audio.addEventListener("timeupdate", handleTimeUpdate);
+      audio.addEventListener("ended", handleEnded);
    return () =>{
       audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+       audio.removeEventListener("canplay", handleLoadedMetadata);
       audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("ended", handleEnded);
    }
-}, [setDuration, setCurrentTime, currentTrack]);
+}, [setDuration, setCurrentTime, currentTrack, nextTrack]);
+
+useEffect(() =>{
+      const audio = audioRef.current;
+   if(!audio) return;
+
+   audio.load()
+   setCurrentTime(0);
+   setDuration(0);
+
+}, [currentTrack, setCurrentTime, setDuration]);
+
+const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
 
     return <div className="music-player">
      <audio ref={audioRef} src={currentTrack.url} preload="metadata" crossOrigin="anonymous"/>
@@ -49,7 +92,7 @@ useEffect(() =>{
      <div className="progress-container">
         <span className="time">{formatTime(currentTime)}</span>
         <input type="range" min="0" max={duration || 0} step="0.1" value={currentTime || 0}  className="progress-bar"
-        />
+       onChange={handleTimeChange}  style={{"--progress":`${progressPercentage}%`}} />
         <span className="time">{formatTime(duration)}</span>
 
      </div>
@@ -66,6 +109,11 @@ useEffect(() =>{
           </button>
           <button className="control-btn" onClick={nextTrack}><img width="24" height="24"
            src="https://img.icons8.com/material-sharp/24/fast-forward.png" alt="fast-forward"/></button>
+     </div>
+     <div className="volume-container">
+      <span className="volume-icon">v</span>
+      <input type="range"  min="0"  max="1"  step="0.1"
+       className="volume-bar" onChange={handleVolumeChange} value={volume} style={{"--progress":`${progressPercentage}%`}}/>
      </div>
     </div>
 }
